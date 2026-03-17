@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
 const authRoutes = require('./routes/authRoutes');
 const memberRoutes = require('./routes/memberRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
@@ -11,8 +12,12 @@ const { protect } = require('./middlewares/authMiddleware');
 const app = express();
 
 // Middlewares
-app.use(cors());
+app.use(cors({
+  origin: true, // You can specify your frontend URL here later
+  credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));

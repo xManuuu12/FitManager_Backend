@@ -40,7 +40,40 @@ const sendTokenResponse = (user, statusCode, res) => {
   const token = jwt.sign({ id: user.id_usuario }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN
   });
+
+  const options = {
+    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax'
+  };
+
   const userData = user.toJSON();
   delete userData.password;
-  res.status(statusCode).json({ success: true, token, user: userData });
+
+  res
+    .status(statusCode)
+    .cookie('token', token, options)
+    .json({
+      success: true,
+      token, // Optional: returned for clients that can't use cookies
+      user: userData
+    });
 };
+
+/**
+ * @desc Logout user / clear cookie
+ * @route GET /api/auth/logout
+ */
+exports.logout = (req, res, next) => {
+  res.cookie('token', 'none', {
+    expires: new Date(Date.now() + 10 * 1000),
+    httpOnly: true
+  });
+
+  res.status(200).json({
+    success: true,
+    data: {}
+  });
+};
+
