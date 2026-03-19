@@ -6,6 +6,7 @@ const authRoutes = require('./routes/authRoutes');
 const memberRoutes = require('./routes/memberRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const membresiaRoutes = require('./routes/membresiaRoutes');
 const errorHandler = require('./middlewares/errorHandler');
 const { protect } = require('./middlewares/authMiddleware');
 
@@ -13,7 +14,7 @@ const app = express();
 
 // Middlewares
 app.use(cors({
-  origin: true, // You can specify your frontend URL here later
+  origin: true,
   credentials: true
 }));
 app.use(express.json());
@@ -26,12 +27,13 @@ if (process.env.NODE_ENV === 'development') {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/members', protect, memberRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/notifications', notificationRoutes);
+app.use('/api/payments', protect, paymentRoutes);
+app.use('/api/notifications', protect, notificationRoutes);
+app.use('/api/membresias', protect, membresiaRoutes);
 
 // Base route
 app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to FitManager API' });
+  res.json({ message: 'Welcome to FitManager SaaS API' });
 });
 
 // Error handling middleware

@@ -1,82 +1,49 @@
-const Payment = require('../models/Payment');
-const Member = require('../models/Member');
-const sequelize = require('../config/database');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const paymentService = require('../services/paymentService');
 
-/**
- * @desc Get all payments
- * @route GET /api/payments
- */
 exports.getAllPayments = async (req, res, next) => {
   try {
-    const payments = await Payment.findAll({
-      include: [{ model: Member, attributes: ['nombre', 'apellido'] }]
-    });
-    res.status(200).json({ success: true, count: payments.length, data: payments });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+
+    const result = await paymentService.getAllPayments(req.user.id_gimnasio, { page, limit });
+    res.status(200).json({ success: true, ...result });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * @desc Get alerts for expired memberships (from MySQL View)
- * @route GET /api/payments/alerts
- */
 exports.getVencidosAlerts = async (req, res, next) => {
   try {
-    const alerts = await sequelize.query('SELECT * FROM alerta_vencidos', {
-      type: sequelize.QueryTypes.SELECT
-    });
+    const alerts = await paymentService.getVencidosAlerts(req.user.id_gimnasio);
     res.status(200).json({ success: true, count: alerts.length, data: alerts });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * @desc Create a Stripe Payment Intent
- * @route POST /api/payments/create-intent
- */
 exports.createStripeIntent = async (req, res, next) => {
   try {
-    const { id_miembro, monto, tipo_membresia } = req.body;
-
-    // Create a PaymentIntent with the order amount and currency
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(monto * 100), // Stripe uses cents
-      currency: 'mxn', // Or your preferred currency
-      metadata: { id_miembro, tipo_membresia }
-    });
-
+    const intent = await paymentService.createStripeIntent(req.user.id_gimnasio, req.body);
     res.status(200).json({
       success: true,
-      clientSecret: paymentIntent.client_secret,
+      clientSecret: intent.client_secret,
     });
   } catch (error) {
+    if (error.message === 'Miembro no encontrado') {
+      return res.status(404).json({ success: false, message: error.message });
+    }
     next(error);
   }
 };
 
-/**
- * @desc Manually record a payment
- * @route POST /api/payments
- */
 exports.recordPayment = async (req, res, next) => {
   try {
-    const { id_miembro, monto, tipo_membresia, fecha_vencimiento } = req.body;
-
-    const payment = await Payment.create({
-      id_miembro,
-      monto,
-      tipo_membresia,
-      fecha_vencimiento
-    });
-
-    // Update member status to 'activo'
-    await Member.update({ estado: 'activo' }, { where: { id_miembro } });
-
+    const payment = await paymentService.recordPayment(req.user.id_gimnasio, req.body);
     res.status(201).json({ success: true, data: payment });
   } catch (error) {
+    if (error.message === 'Miembro no encontrado') {
+      return res.status(404).json({ success: false, message: error.message });
+    }
     next(error);
   }
 };

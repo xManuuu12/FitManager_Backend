@@ -1,8 +1,8 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-const Member = sequelize.define('Member', {
-  id_miembro: {
+const Membresia = sequelize.define('Membresia', {
+  id_membresia: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
     primaryKey: true,
@@ -16,28 +16,24 @@ const Member = sequelize.define('Member', {
     }
   },
   nombre: {
-    type: DataTypes.STRING(100),
+    type: DataTypes.STRING(50),
     allowNull: false,
   },
-  apellido: {
-    type: DataTypes.STRING(100),
+  precio: {
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
-  telefono: {
-    type: DataTypes.STRING(20),
-    allowNull: true,
-  },
-  estado: {
-    type: DataTypes.ENUM('activo', 'vencido'),
-    defaultValue: 'vencido',
+  duracion_dias: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
   }
 }, {
-  tableName: 'miembros',
+  tableName: 'membresias',
   timestamps: true,
-  createdAt: 'fecha_registro',
+  createdAt: 'created_at',
   updatedAt: 'updated_at',
   deletedAt: 'deleted_at',
   paranoid: true,
 });
 
-module.exports = Member;
+module.exports = Membresia;

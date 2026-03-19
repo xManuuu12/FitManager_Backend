@@ -1,38 +1,27 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-const Member = sequelize.define('Member', {
-  id_miembro: {
+const Gimnasio = sequelize.define('Gimnasio', {
+  id_gimnasio: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
     primaryKey: true,
-  },
-  id_gimnasio: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: 'gimnasios',
-      key: 'id_gimnasio'
-    }
   },
   nombre: {
     type: DataTypes.STRING(100),
     allowNull: false,
   },
-  apellido: {
-    type: DataTypes.STRING(100),
-    allowNull: false,
+  direccion: {
+    type: DataTypes.STRING(255),
   },
   telefono: {
     type: DataTypes.STRING(20),
-    allowNull: true,
   },
-  estado: {
-    type: DataTypes.ENUM('activo', 'vencido'),
-    defaultValue: 'vencido',
+  email: {
+    type: DataTypes.STRING(100),
   }
 }, {
-  tableName: 'miembros',
+  tableName: 'gimnasios',
   timestamps: true,
   createdAt: 'fecha_registro',
   updatedAt: 'updated_at',
@@ -40,4 +29,4 @@ const Member = sequelize.define('Member', {
   paranoid: true,
 });
 
-module.exports = Member;
+module.exports = Gimnasio;

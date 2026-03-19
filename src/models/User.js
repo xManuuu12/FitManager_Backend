@@ -1,12 +1,21 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 const bcrypt = require('bcryptjs');
+const Gimnasio = require('./Gimnasio');
 
 const User = sequelize.define('User', {
   id_usuario: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
     primaryKey: true,
+  },
+  id_gimnasio: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'gimnasios',
+      key: 'id_gimnasio'
+    }
   },
   nombre: {
     type: DataTypes.STRING(100),
@@ -15,7 +24,6 @@ const User = sequelize.define('User', {
   email: {
     type: DataTypes.STRING(100),
     allowNull: false,
-    unique: true,
     validate: { isEmail: true }
   },
   password: {
@@ -28,8 +36,22 @@ const User = sequelize.define('User', {
   }
 }, {
   tableName: 'usuarios',
-  timestamps: false, // Tu script SQL no tiene createdAt/updatedAt
+  timestamps: true,
+  createdAt: 'fecha_registro',
+  updatedAt: 'updated_at',
+  deletedAt: 'deleted_at',
+  paranoid: true,
+  indexes: [
+    {
+      unique: true,
+      fields: ['email', 'id_gimnasio']
+    }
+  ]
 });
+
+// Relaciones
+User.belongsTo(Gimnasio, { foreignKey: 'id_gimnasio', as: 'gimnasio' });
+Gimnasio.hasMany(User, { foreignKey: 'id_gimnasio' });
 
 User.prototype.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
