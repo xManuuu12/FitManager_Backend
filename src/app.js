@@ -7,6 +7,7 @@ const memberRoutes = require('./routes/memberRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const membresiaRoutes = require('./routes/membresiaRoutes');
+const visitRoutes = require('./routes/visitRoutes');
 const errorHandler = require('./middlewares/errorHandler');
 const { protect } = require('./middlewares/authMiddleware');
 
@@ -30,6 +31,7 @@ app.use('/api/members', protect, memberRoutes);
 app.use('/api/payments', protect, paymentRoutes);
 app.use('/api/notifications', protect, notificationRoutes);
 app.use('/api/membresias', protect, membresiaRoutes);
+app.use('/api/visitas', protect, visitRoutes);
 
 // Base route
 app.get('/', (req, res) => {

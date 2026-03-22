@@ -22,11 +22,7 @@ const Gimnasio = sequelize.define('Gimnasio', {
   }
 }, {
   tableName: 'gimnasios',
-  timestamps: true,
-  createdAt: 'fecha_registro',
-  updatedAt: 'updated_at',
-  deletedAt: 'deleted_at',
-  paranoid: true,
+  timestamps: false,
 });
 
 module.exports = Gimnasio;

@@ -1,4 +1,5 @@
 const Member = require('../models/Member');
+const Payment = require('../models/Payment');
 
 /**
  * Servicio para gestionar la lógica de miembros
@@ -6,18 +7,40 @@ const Member = require('../models/Member');
 class MemberService {
   async getAllMembers(id_gimnasio, { page = 1, limit = 20 }) {
     const offset = (page - 1) * limit;
+
+    // Asegurar asociación para el include
+    if (!Member.associations.Payments) {
+      Member.hasMany(Payment, { foreignKey: 'id_miembro' });
+    }
+
     const { count, rows } = await Member.findAndCountAll({
       where: { id_gimnasio },
+      include: [{
+        model: Payment,
+        attributes: ['fecha_vencimiento'],
+        limit: 1,
+        order: [['fecha_vencimiento', 'DESC']]
+      }],
       limit,
       offset,
       order: [['nombre', 'ASC']]
+    });
+
+    // Aplanamos el resultado para incluir la fecha de vencimiento directamente
+    const flattenedData = rows.map(m => {
+      const member = m.toJSON();
+      const lastPayment = member.Payments && member.Payments.length > 0 ? member.Payments[0] : null;
+      return {
+        ...member,
+        fecha_vencimiento: lastPayment ? lastPayment.fecha_vencimiento : null
+      };
     });
 
     return {
       count,
       totalPages: Math.ceil(count / limit),
       currentPage: page,
-      data: rows
+      data: flattenedData
     };
   }
 
