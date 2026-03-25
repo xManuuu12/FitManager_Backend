@@ -19,7 +19,8 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:4200',
   'http://localhost:5173',
-  'https://fit-manager-backend.vercel.app/'
+  'https://fit-manager-backend.vercel.app/',
+  'https://laguna-fitnes.vercel.app/'
 ];
 
 // Middlewares
