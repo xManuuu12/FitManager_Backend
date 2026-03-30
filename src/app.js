@@ -19,7 +19,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:4200',
   'http://localhost:5173',
-  'https://fit-manager-backend-gb183crfy-planifys-projects-8087f027.vercel.app'
+  'https://fit-manager-backend.vercel.app/'
 ];
 
 // Middlewares
