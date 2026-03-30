@@ -15,10 +15,30 @@ const paymentController = require('./controllers/paymentController');
 const app = express();
 
 // Middlewares
+// Configuración de CORS más explícita
+const allowedOrigins = [
+  'https://laguna-fitnes-3likhdb6c-planifys-projects-8087f027.vercel.app/', // Tu frontend en Vercel
+  'http://localhost:4200'                 // Tu frontend local
+];
+
 app.use(cors({
-  origin: true,
-  credentials: true
+  origin: function (origin, callback) {
+    // Permitir peticiones sin origen (como Postman o server-to-server)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'El permiso CORS para este origen no está permitido.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Importante para las peticiones de "prueba" (Preflight)
+app.options('*', cors());
 
 // Webhook de Stripe (Debe ir antes de express.json())
 app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), paymentController.stripeWebhook);
