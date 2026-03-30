@@ -33,9 +33,10 @@ const Member = sequelize.define('Member', {
   }
 }, {
   tableName: 'miembros',
-  timestamps: false,
-  createdAt: 'fecha_registro',
-  updatedAt: 'updated_at',
+  timestamps: true,        // 1. Actívalo para que Sequelize maneje las fechas
+  underscored: true,       // 2. IMPORTANTE: Esto le dice que use nombres con guion bajo (_)
+  createdAt: 'fecha_registro', // 3. Mapea fecha_registro como el createdAt
+  updatedAt: 'updated_at',     // 4. Mapea updated_at como el updatedAt
   deletedAt: 'deleted_at',
   paranoid: false,
 });

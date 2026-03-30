@@ -14,31 +14,30 @@ const paymentController = require('./controllers/paymentController');
 
 const app = express();
 
-// Middlewares
-// Configuración de CORS más explícita
+// Orígenes permitidos (Locales y Producción)
 const allowedOrigins = [
-  'https://laguna-fitnes-3likhdb6c-planifys-projects-8087f027.vercel.app/', // Tu frontend en Vercel
-  'http://localhost:4200'                 // Tu frontend local
+  'http://localhost:3000',
+  'http://localhost:4200',
+  'http://localhost:5173',
+  'https://fit-manager-backend-gb183crfy-planifys-projects-8087f027.vercel.app'
 ];
 
+// Middlewares
 app.use(cors({
   origin: function (origin, callback) {
-    // Permitir peticiones sin origen (como Postman o server-to-server)
+    // Permitir solicitudes sin origen (como apps móviles o curl)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'El permiso CORS para este origen no está permitido.';
-      return callback(new Error(msg), false);
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
     }
-    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
-
-// Importante para las peticiones de "prueba" (Preflight)
-app.options('*', cors());
 
 // Webhook de Stripe (Debe ir antes de express.json())
 app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), paymentController.stripeWebhook);
