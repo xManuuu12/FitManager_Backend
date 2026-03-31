@@ -14,30 +14,32 @@ const paymentController = require('./controllers/paymentController');
 
 const app = express();
 
-// Orígenes permitidos (Locales y Producción)
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:4200',
-  'http://localhost:5173',
-  'https://fit-manager-backend.vercel.app',
-  'https://laguna-fitnes.vercel.app'
-];
-
-// Middlewares
+// 1. Configuración de CORS dinámica
 app.use(cors({
   origin: function (origin, callback) {
-    // Permitir solicitudes sin origen (como apps móviles o curl)
+    // Permitir solicitudes sin origen (como Postman o el propio servidor)
     if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+
+    const allowedDomains = [
+      'localhost',
+      'vercel.app', // Esto permite CUALQUIER despliegue de Vercel
+      'laguna-fitnes'
+    ];
+
+    // Comprobamos si el origen contiene alguno de nuestros dominios permitidos
+    const isAllowed = allowedDomains.some(domain => origin.includes(domain));
+
+    if (isAllowed || process.env.NODE_ENV === 'development') {
       callback(null, true);
     } else {
+      // Log para saber qué origen exacto está siendo bloqueado
+      console.error(`CORS Bloqueado para: ${origin}`);
       callback(new Error('No permitido por CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'set-cookie']
 }));
 
 // Webhook de Stripe (Debe ir antes de express.json())
