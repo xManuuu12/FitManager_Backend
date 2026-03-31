@@ -10,8 +10,14 @@ if (connectionString) {
   // CONFIGURACIÓN PARA PRODUCCIÓN (Vercel/Railway)
   sequelize = new Sequelize(connectionString, {
     dialect: 'mysql',
-    dialectModule: require('mysql2'), // OBLIGATORIO para evitar el error que tenías
+    dialectModule: require('mysql2'),
     logging: false,
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false // Esto evita errores de certificado en Railway
+      }
+    },
     pool: { max: 5, min: 0, acquire: 30000, idle: 10000 }
   });
 } else {
