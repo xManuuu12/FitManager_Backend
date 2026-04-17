@@ -44,7 +44,7 @@ class AnalyticsService {
       ],
       where: { id_gimnasio, ...paymentDateFilter },
       include: [{ model: Membresia, attributes: ['nombre'] }],
-      group: ['id_membresia', 'Membresia.id_membresia'],
+      group: ['id_membresia', 'Membresia.nombre'],
       raw: true,
       nest: true
     });
@@ -63,7 +63,7 @@ class AnalyticsService {
       ],
       where: { id_gimnasio, ...paymentDateFilter },
       include: [{ model: Membresia, attributes: ['nombre'] }],
-      group: ['id_membresia', 'Membresia.id_membresia'],
+      group: ['id_membresia', 'Membresia.nombre'],
       order: [[sequelize.literal('total_generado'), 'DESC']],
       raw: true,
       nest: true
