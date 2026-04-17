@@ -15,11 +15,22 @@ class AnalyticsService {
     if (startDate || endDate) {
       paymentDateFilter.fecha_pago = {};
       if (startDate) paymentDateFilter.fecha_pago[Op.gte] = new Date(startDate);
-      // Asumimos que endDate podría venir sin horas y queremos incluir hasta el final del día
       if (endDate) paymentDateFilter.fecha_pago[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
     }
 
-    // 1. Estados de los miembros (activos vs inactivos) - No se filtra por fecha porque es un estado actual global
+    // Obtener nombres de membresías para mapeo (evita problemas de alias en JOINs con GROUP BY)
+    const memberships = await Membresia.findAll({ 
+      where: { id_gimnasio }, 
+      attributes: ['id_membresia', 'nombre'],
+      raw: true 
+    });
+    
+    const membershipMap = memberships.reduce((acc, m) => {
+      acc[m.id_membresia] = m.nombre;
+      return acc;
+    }, {});
+
+    // 1. Estados de los miembros
     const membersStatus = await Member.findAll({
       attributes: ['estado', [sequelize.fn('COUNT', sequelize.col('id_miembro')), 'count']],
       where: { id_gimnasio },
@@ -36,25 +47,23 @@ class AnalyticsService {
       }
     });
 
-    // 2. Distribución de membresías
+    // 2. Distribución de membresías (Agrupado por ID en Payment)
     const membershipsDistribution = await Payment.findAll({
       attributes: [
         'id_membresia',
         [sequelize.fn('COUNT', sequelize.col('id_pago')), 'count']
       ],
       where: { id_gimnasio, ...paymentDateFilter },
-      include: [{ model: Membresia, attributes: ['id_membresia', 'nombre'] }],
-      group: [sequelize.col('Payment.id_membresia'), sequelize.col('Membresia.id_membresia'), sequelize.col('Membresia.nombre')],
-      raw: true,
-      nest: true
+      group: ['id_membresia'],
+      raw: true
     });
 
     const distribucion = membershipsDistribution.map(row => ({
-      nombre: row.Membresia?.nombre || 'Desconocida',
+      nombre: membershipMap[row.id_membresia] || 'Desconocida',
       cantidad: parseInt(row.count, 10)
     }));
 
-    // 3. Flujo de ingresos y membresía más vendida
+    // 3. Flujo de ingresos y ventas (Agrupado por ID en Payment)
     const revenueFlow = await Payment.findAll({
       attributes: [
         'id_membresia',
@@ -62,15 +71,13 @@ class AnalyticsService {
         [sequelize.fn('COUNT', sequelize.col('id_pago')), 'ventas']
       ],
       where: { id_gimnasio, ...paymentDateFilter },
-      include: [{ model: Membresia, attributes: ['id_membresia', 'nombre'] }],
-      group: [sequelize.col('Payment.id_membresia'), sequelize.col('Membresia.id_membresia'), sequelize.col('Membresia.nombre')],
+      group: ['id_membresia'],
       order: [[sequelize.literal('total_generado'), 'DESC']],
-      raw: true,
-      nest: true
+      raw: true
     });
 
     const ingresos = revenueFlow.map(row => ({
-      nombre: row.Membresia?.nombre || 'Desconocida',
+      nombre: membershipMap[row.id_membresia] || 'Desconocida',
       total: parseFloat(row.total_generado) || 0,
       ventas: parseInt(row.ventas, 10)
     }));
@@ -82,7 +89,6 @@ class AnalyticsService {
       if (startDate) visitDateFilter.fecha_visita[Op.gte] = new Date(startDate);
       if (endDate) visitDateFilter.fecha_visita[Op.lte] = new Date(`${endDate}T23:59:59.999Z`);
     } else {
-      // Valor por defecto si no hay filtro de fechas: Últimos 6 meses
       const now = new Date();
       const defaultStartDate = new Date();
       defaultStartDate.setMonth(now.getMonth() - 6); 
@@ -91,21 +97,17 @@ class AnalyticsService {
 
     const visitsData = await Visit.findAll({
       attributes: ['fecha_visita'],
-      where: {
-        id_gimnasio,
-        ...visitDateFilter
-      },
+      where: { id_gimnasio, ...visitDateFilter },
       raw: true
     });
 
     const visitas = {
-      porDiaSemana: { 0:0, 1:0, 2:0, 3:0, 4:0, 5:0, 6:0 }, // Domingo(0) a Sábado(6)
+      porDiaSemana: { 0:0, 1:0, 2:0, 3:0, 4:0, 5:0, 6:0 },
       ultimos7Dias: {},
       porSemana: {},
       porMes: {}
     };
 
-    // Inicializar últimos 7 días con ceros para tener el rango completo (relativo al día de hoy)
     for(let i=6; i>=0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
@@ -114,39 +116,22 @@ class AnalyticsService {
 
     visitsData.forEach(v => {
       const date = new Date(v.fecha_visita);
-      if (isNaN(date.getTime())) return; // Ignorar fechas inválidas
-
+      if (isNaN(date.getTime())) return;
       const dateStr = date.toISOString().split('T')[0];
-      const monthStr = dateStr.substring(0, 7); // Formato YYYY-MM
-      
-      // Incrementa el día de la semana
+      const monthStr = dateStr.substring(0, 7);
       visitas.porDiaSemana[date.getDay()]++;
-
-      // Incrementa si es de los últimos 7 días
-      if (visitas.ultimos7Dias[dateStr] !== undefined) {
-        visitas.ultimos7Dias[dateStr]++;
-      }
-
-      // Incrementa el mes
+      if (visitas.ultimos7Dias[dateStr] !== undefined) visitas.ultimos7Dias[dateStr]++;
       if (!visitas.porMes[monthStr]) visitas.porMes[monthStr] = 0;
       visitas.porMes[monthStr]++;
-      
-      // Agrupación simple por semana del año
       const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
       const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
       const weekNumber = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
       const weekStr = `${date.getFullYear()}-W${weekNumber.toString().padStart(2, '0')}`;
-      
       if (!visitas.porSemana[weekStr]) visitas.porSemana[weekStr] = 0;
       visitas.porSemana[weekStr]++;
     });
 
-    return {
-      estados,
-      distribucion,
-      ingresos,
-      visitas
-    };
+    return { estados, distribucion, ingresos, visitas };
   }
 
   async exportToExcel(id_gimnasio, type = 'all', filters = {}) {
@@ -154,7 +139,6 @@ class AnalyticsService {
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'FitManager Analytics';
     workbook.created = new Date();
-
 
     if (type === 'estados' || type === 'all') {
       const sheet = workbook.addWorksheet('Estados de Miembros');
@@ -173,9 +157,7 @@ class AnalyticsService {
         { header: 'Membresía', key: 'nombre', width: 30 },
         { header: 'Cantidad Vendida', key: 'cantidad', width: 20 }
       ];
-      data.distribucion.forEach(item => {
-        sheet.addRow(item);
-      });
+      data.distribucion.forEach(item => sheet.addRow(item));
       sheet.getRow(1).font = { bold: true };
     }
 
@@ -186,53 +168,29 @@ class AnalyticsService {
         { header: 'Total Generado ($)', key: 'total', width: 25 },
         { header: 'Cantidad de Ventas', key: 'ventas', width: 20 }
       ];
-      data.ingresos.forEach(item => {
-        sheet.addRow(item);
-      });
+      data.ingresos.forEach(item => sheet.addRow(item));
       sheet.getRow(1).font = { bold: true };
     }
 
     if (type === 'visitas' || type === 'all') {
       const sheet = workbook.addWorksheet('Visitas (Resumen)');
-      
       sheet.addRow(['VISITAS POR DÍA DE LA SEMANA']);
       sheet.addRow(['Día', 'Cantidad']);
       const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-      for (let i = 0; i < 7; i++) {
-        sheet.addRow([diasSemana[i], data.visitas.porDiaSemana[i]]);
-      }
+      for (let i = 0; i < 7; i++) sheet.addRow([diasSemana[i], data.visitas.porDiaSemana[i]]);
       sheet.addRow([]);
-
       sheet.addRow(['VISITAS ÚLTIMOS 7 DÍAS']);
       sheet.addRow(['Fecha', 'Cantidad']);
-      for (const [fecha, cantidad] of Object.entries(data.visitas.ultimos7Dias)) {
-        sheet.addRow([fecha, cantidad]);
-      }
+      for (const [fecha, cantidad] of Object.entries(data.visitas.ultimos7Dias)) sheet.addRow([fecha, cantidad]);
       sheet.addRow([]);
-
       sheet.addRow(['VISITAS POR MES']);
       sheet.addRow(['Mes', 'Cantidad']);
-      for (const [mes, cantidad] of Object.entries(data.visitas.porMes)) {
-        sheet.addRow([mes, cantidad]);
-      }
-
-      // Dar formato a cabeceras de sección
-      [1, 11, 21].forEach(rowNum => {
-        const row = sheet.getRow(rowNum);
-        if (row) {
-          row.font = { bold: true, size: 12 };
-        }
-      });
-      [2, 12, 22].forEach(rowNum => {
-        const row = sheet.getRow(rowNum);
-        if (row) {
-           row.font = { bold: true };
-        }
-      });
+      for (const [mes, cantidad] of Object.entries(data.visitas.porMes)) sheet.addRow([mes, cantidad]);
+      [1, 11, 21].forEach(rowNum => { const row = sheet.getRow(rowNum); if (row) row.font = { bold: true, size: 12 }; });
+      [2, 12, 22].forEach(rowNum => { const row = sheet.getRow(rowNum); if (row) row.font = { bold: true }; });
     }
 
-    const buffer = await workbook.xlsx.writeBuffer();
-    return buffer;
+    return await workbook.xlsx.writeBuffer();
   }
 }
 
