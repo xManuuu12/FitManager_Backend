@@ -194,6 +194,42 @@
 
 ---
 
+## 📈 7. Analíticas (Dashboard & Export)
+
+### Obtener Datos del Dashboard
+*   **GET** `/analytics/dashboard`
+*   **Query Params Opcionales:** `startDate` (YYYY-MM-DD), `endDate` (YYYY-MM-DD)
+*   **Descripción:** Retorna todas las métricas agrupadas para las gráficas del frontend.
+*   **Respuesta:**
+    ```json
+    {
+      "success": true,
+      "data": {
+        "estados": { "activos": 120, "inactivos": 15 },
+        "distribucion": [
+          { "nombre": "Mensualidad", "cantidad": 85 }
+        ],
+        "ingresos": [
+          { "nombre": "Anual", "total": 140000, "ventas": 35 }
+        ],
+        "visitas": {
+          "porDiaSemana": { "0":0, "1":45, "2":50, "3":48, "4":40, "5":30, "6":15 },
+          "ultimos7Dias": { "2026-04-11": 15, "...": "..." },
+          "porSemana": { "2026-W15": 210 },
+          "porMes": { "2026-04": 390 }
+        }
+      }
+    }
+    ```
+
+### Exportar a Excel
+*   **GET** `/analytics/export`
+*   **Query Params Opcionales:** `type` ("estados", "distribucion", "ingresos", "visitas", o "all"), `startDate`, `endDate`
+*   **Descripción:** Genera y descarga un archivo `.xlsx` con los datos analíticos solicitados.
+*   **Respuesta:** Archivo Binario (Application/vnd.openxmlformats-officedocument.spreadsheetml.sheet)
+
+---
+
 ## 🛡️ Manejo de Errores Estándar
 
 Todas las respuestas fallidas siguen este formato:
