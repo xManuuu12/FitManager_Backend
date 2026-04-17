@@ -43,8 +43,8 @@ class AnalyticsService {
         [sequelize.fn('COUNT', sequelize.col('id_pago')), 'count']
       ],
       where: { id_gimnasio, ...paymentDateFilter },
-      include: [{ model: Membresia, attributes: ['nombre'] }],
-      group: ['id_membresia', 'Membresia.nombre'],
+      include: [{ model: Membresia, attributes: ['id_membresia', 'nombre'] }],
+      group: [sequelize.col('Payment.id_membresia'), sequelize.col('Membresia.id_membresia'), sequelize.col('Membresia.nombre')],
       raw: true,
       nest: true
     });
@@ -62,8 +62,8 @@ class AnalyticsService {
         [sequelize.fn('COUNT', sequelize.col('id_pago')), 'ventas']
       ],
       where: { id_gimnasio, ...paymentDateFilter },
-      include: [{ model: Membresia, attributes: ['nombre'] }],
-      group: ['id_membresia', 'Membresia.nombre'],
+      include: [{ model: Membresia, attributes: ['id_membresia', 'nombre'] }],
+      group: [sequelize.col('Payment.id_membresia'), sequelize.col('Membresia.id_membresia'), sequelize.col('Membresia.nombre')],
       order: [[sequelize.literal('total_generado'), 'DESC']],
       raw: true,
       nest: true
