@@ -58,7 +58,7 @@ if (process.env.NODE_ENV === 'development') {
 app.use('/api/auth', authRoutes);
 app.use('/api/members', protect, memberRoutes);
 app.use('/api/payments', protect, paymentRoutes);
-app.use('/api/notifications', protect, notificationRoutes);
+app.use('/api/notifications', notificationRoutes); // Se quitó 'protect' aquí
 app.use('/api/membresias', protect, membresiaRoutes);
 app.use('/api/visitas', protect, visitRoutes);
 app.use('/api/analytics', protect, analyticsRoutes);
