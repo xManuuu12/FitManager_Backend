@@ -47,6 +47,7 @@ app.use(cors({
 app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), paymentController.stripeWebhook);
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 if (process.env.NODE_ENV === 'development') {
@@ -65,6 +66,11 @@ app.use('/api/analytics', protect, analyticsRoutes);
 // Base route
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to FitManager SaaS API' });
+});
+
+// Verificación de dominio para Twilio
+app.get('/a8271e7334f0f14d6b13b706b8f509ce.html', (req, res) => {
+  res.send('twilio-domain-verification=a8271e7334f0f14d6b13b706b8f509ce');
 });
 
 // Error handling middleware
