@@ -115,15 +115,21 @@ class AnalyticsService {
     }
 
     visitsData.forEach(v => {
+      // Forzamos que la fecha se interprete en la zona horaria local para los cálculos de JS
       const date = new Date(v.fecha_visita);
       if (isNaN(date.getTime())) return;
       
-      // Usamos toLocaleDateString con sv-SE para obtener YYYY-MM-DD en la hora local del servidor
-      const dateStr = date.toLocaleDateString('sv-SE'); 
-      const monthStr = dateStr.substring(0, 7);
+      // Obtenemos los componentes locales para evitar desfases de UTC
+      const localDateStr = date.toLocaleDateString('sv-SE'); // YYYY-MM-DD local
+      const localDayOfWeek = date.getDay(); // 0-6 local
+      const monthStr = localDateStr.substring(0, 7);
       
-      visitas.porDiaSemana[date.getDay()]++;
-      if (visitas.ultimos7Dias[dateStr] !== undefined) visitas.ultimos7Dias[dateStr]++;
+      visitas.porDiaSemana[localDayOfWeek]++;
+      
+      if (visitas.ultimos7Dias[localDateStr] !== undefined) {
+        visitas.ultimos7Dias[localDateStr]++;
+      }
+      
       if (!visitas.porMes[monthStr]) visitas.porMes[monthStr] = 0;
       visitas.porMes[monthStr]++;
       
