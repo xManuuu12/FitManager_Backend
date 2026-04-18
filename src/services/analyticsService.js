@@ -10,12 +10,12 @@ class AnalyticsService {
   async getDashboardData(id_gimnasio, filters = {}) {
     const { startDate, endDate } = filters;
 
-    // Filtros de fecha local (sin la Z forzada de UTC)
+    // Filtros de fecha (usamos strings para evitar conversiones de zona horaria de JS)
     const paymentDateFilter = {};
     if (startDate || endDate) {
       paymentDateFilter.fecha_pago = {};
-      if (startDate) paymentDateFilter.fecha_pago[Op.gte] = new Date(`${startDate} 00:00:00`);
-      if (endDate) paymentDateFilter.fecha_pago[Op.lte] = new Date(`${endDate} 23:59:59`);
+      if (startDate) paymentDateFilter.fecha_pago[Op.gte] = `${startDate} 00:00:00`;
+      if (endDate) paymentDateFilter.fecha_pago[Op.lte] = `${endDate} 23:59:59`;
     }
 
     const memberships = await Membresia.findAll({ 
@@ -75,17 +75,22 @@ class AnalyticsService {
     const visitDateFilter = {};
     if (startDate || endDate) {
       visitDateFilter.fecha_visita = {};
-      if (startDate) visitDateFilter.fecha_visita[Op.gte] = new Date(`${startDate} 00:00:00`);
-      if (endDate) visitDateFilter.fecha_visita[Op.lte] = new Date(`${endDate} 23:59:59`);
+      if (startDate) visitDateFilter.fecha_visita[Op.gte] = `${startDate} 00:00:00`;
+      if (endDate) visitDateFilter.fecha_visita[Op.lte] = `${endDate} 23:59:59`;
     } else {
       const now = new Date();
       const defaultStartDate = new Date();
       defaultStartDate.setMonth(now.getMonth() - 6); 
-      visitDateFilter.fecha_visita = { [Op.gte]: defaultStartDate };
+      // Formatear fecha por defecto a string
+      visitDateFilter.fecha_visita = { [Op.gte]: defaultStartDate.toLocaleDateString('sv-SE') + ' 00:00:00' };
     }
 
+    // Usamos funciones de MySQL para obtener la fecha y el día ya calculados por la DB
     const visitsData = await Visit.findAll({
-      attributes: ['fecha_visita'],
+      attributes: [
+        [sequelize.fn('DATE_FORMAT', sequelize.col('fecha_visita'), '%Y-%m-%d'), 'dateStr'],
+        [sequelize.fn('DAYOFWEEK', sequelize.col('fecha_visita')), 'dayOfWeek']
+      ],
       where: { id_gimnasio, ...visitDateFilter },
       raw: true
     });
@@ -97,21 +102,17 @@ class AnalyticsService {
       porMes: {}
     };
 
-    // Inicializar últimos 7 días con fecha local
+    // Inicializar últimos 7 días respetando la zona horaria local
     for(let i=6; i>=0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const dateStr = d.toLocaleDateString('sv-SE'); // YYYY-MM-DD local
+      const dateStr = d.toLocaleDateString('sv-SE', { timeZone: 'America/Mexico_City' });
       visitas.ultimos7Dias[dateStr] = 0;
     }
 
     visitsData.forEach(v => {
-      const date = new Date(v.fecha_visita);
-      if (isNaN(date.getTime())) return;
-      
-      // Forzamos el uso de componentes locales para evitar el salto de día UTC
-      const dateStr = date.toLocaleDateString('sv-SE'); 
-      const dayOfWeek = date.getDay(); // 0-6 local
+      const dateStr = v.dateStr; // "YYYY-MM-DD" desde DB
+      const dayOfWeek = parseInt(v.dayOfWeek) - 1; // MySQL 1 (Dom) a 7 (Sab) -> JS 0 a 6
       const monthStr = dateStr.substring(0, 7);
       
       visitas.porDiaSemana[dayOfWeek]++;
@@ -123,10 +124,14 @@ class AnalyticsService {
       if (!visitas.porMes[monthStr]) visitas.porMes[monthStr] = 0;
       visitas.porMes[monthStr]++;
       
-      const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-      const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+      // Calculamos la semana basándonos en la fecha de la DB
+      const dateParts = dateStr.split('-');
+      const dateObj = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+      const firstDayOfYear = new Date(dateObj.getFullYear(), 0, 1);
+      const pastDaysOfYear = (dateObj - firstDayOfYear) / 86400000;
       const weekNumber = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-      const weekStr = `${date.getFullYear()}-W${weekNumber.toString().padStart(2, '0')}`;
+      const weekStr = `${dateObj.getFullYear()}-W${weekNumber.toString().padStart(2, '0')}`;
+      
       if (!visitas.porSemana[weekStr]) visitas.porSemana[weekStr] = 0;
       visitas.porSemana[weekStr]++;
     });
