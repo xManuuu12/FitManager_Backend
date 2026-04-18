@@ -1,6 +1,8 @@
+require('dotenv').config();
+process.env.TZ = 'America/Mexico_City';
+
 const app = require('./app');
 const sequelize = require('./config/database');
-require('dotenv').config();
 
 const PORT = process.env.PORT || 5000;
 

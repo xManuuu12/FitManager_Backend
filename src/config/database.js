@@ -12,6 +12,7 @@ if (connectionString) {
     dialect: 'mysql',
     dialectModule: require('mysql2'),
     logging: false,
+    timezone: '-06:00', // Mexico Central Time
     dialectOptions: {
       ssl: {
         require: true,
@@ -31,7 +32,8 @@ if (connectionString) {
       port: process.env.DB_PORT || 3306,
       dialect: 'mysql',
       dialectModule: require('mysql2'),
-      logging: false
+      logging: false,
+      timezone: '-06:00' // Mexico Central Time
     }
   );
 }

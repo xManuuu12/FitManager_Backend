@@ -117,12 +117,16 @@ class AnalyticsService {
     visitsData.forEach(v => {
       const date = new Date(v.fecha_visita);
       if (isNaN(date.getTime())) return;
-      const dateStr = date.toISOString().split('T')[0];
+      
+      // Usamos toLocaleDateString con sv-SE para obtener YYYY-MM-DD en la hora local del servidor
+      const dateStr = date.toLocaleDateString('sv-SE'); 
       const monthStr = dateStr.substring(0, 7);
+      
       visitas.porDiaSemana[date.getDay()]++;
       if (visitas.ultimos7Dias[dateStr] !== undefined) visitas.ultimos7Dias[dateStr]++;
       if (!visitas.porMes[monthStr]) visitas.porMes[monthStr] = 0;
       visitas.porMes[monthStr]++;
+      
       const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
       const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
       const weekNumber = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
