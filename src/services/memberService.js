@@ -7,44 +7,47 @@ const sequelize = require('../config/database');
  */
 class MemberService {
   async getAllMembers(id_gimnasio, { page = 1, limit = 20 }) {
-    const offset = (page - 1) * limit;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
 
-    // Asegurar asociación para el include
+    // Asegurar asociación
     if (!Member.associations.Payments) {
       Member.hasMany(Payment, { foreignKey: 'id_miembro' });
     }
 
-    const { count, rows } = await Member.findAndCountAll({
-      where: { id_gimnasio },
-      include: [{
-        model: Payment,
-        attributes: ['fecha_vencimiento'],
-        limit: 1,
-        order: [['fecha_vencimiento', 'DESC']]
-      }],
-      limit,
-      offset,
-      order: [['nombre', 'ASC']]
-    });
+    try {
+      const { count, rows } = await Member.findAndCountAll({
+        where: { id_gimnasio },
+        distinct: true, 
+        include: [{
+          model: Payment,
+          attributes: ['fecha_vencimiento'],
+          limit: 1,
+          order: [['fecha_vencimiento', 'DESC']]
+        }],
+        limit: parseInt(limit),
+        offset: offset,
+        order: [['nombre', 'ASC']]
+      });
 
-    
+      const flattenedData = rows.map(m => {
+        const member = m.toJSON();
+        const lastPayment = member.Payments && member.Payments.length > 0 ? member.Payments[0] : null;
+        return {
+          ...member,
+          fecha_vencimiento: lastPayment ? lastPayment.fecha_vencimiento : null
+        };
+      });
 
-    // Aplanamos el resultado para incluir la fecha de vencimiento directamente
-    const flattenedData = rows.map(m => {
-      const member = m.toJSON();
-      const lastPayment = member.Payments && member.Payments.length > 0 ? member.Payments[0] : null;
       return {
-        ...member,
-        fecha_vencimiento: lastPayment ? lastPayment.fecha_vencimiento : null
+        count,
+        totalPages: Math.ceil(count / limit),
+        currentPage: parseInt(page),
+        data: flattenedData
       };
-    });
-
-    return {
-      count,
-      totalPages: Math.ceil(count / limit),
-      currentPage: page,
-      data: flattenedData
-    };
+    } catch (error) {
+      console.error("Error en getAllMembers:", error);
+      throw error;
+    }
   }
 
   async getMemberById(id_gimnasio, id_miembro) {
