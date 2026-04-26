@@ -27,20 +27,7 @@ class MemberService {
       order: [['nombre', 'ASC']]
     });
 
-    // ... dentro de getAllMembers
-const { count, rows } = await Member.findAndCountAll({
-  where: { id_gimnasio },
-  distinct: true, // <--- ESTA ES LA CLAVE
-  include: [{
-    model: Payment,
-    attributes: ['fecha_vencimiento'],
-    limit: 1,
-    order: [['fecha_vencimiento', 'DESC']]
-  }],
-  limit: parseInt(limit), // Asegúrate de que sean números
-  offset: parseInt(offset),
-  order: [['nombre', 'ASC']]
-});
+    
 
     // Aplanamos el resultado para incluir la fecha de vencimiento directamente
     const flattenedData = rows.map(m => {
