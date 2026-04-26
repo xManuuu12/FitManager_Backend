@@ -6,48 +6,46 @@ const sequelize = require('../config/database');
  * Servicio para gestionar la lógica de miembros
  */
 class MemberService {
-  async getAllMembers(id_gimnasio, { page = 1, limit = 20 }) {
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+  async getAllMembers(id_gimnasio, { page = 1, limit = null }) {
+    const offset = limit ? (page - 1) * limit : null;
 
-    // Asegurar asociación
+    // Asegurar asociación para el include
     if (!Member.associations.Payments) {
       Member.hasMany(Payment, { foreignKey: 'id_miembro' });
     }
 
-    try {
-      const { count, rows } = await Member.findAndCountAll({
-        where: { id_gimnasio },
-        distinct: true, 
-        include: [{
-          model: Payment,
-          attributes: ['fecha_vencimiento'],
-          limit: 1,
-          order: [['fecha_vencimiento', 'DESC']]
-        }],
-        limit: parseInt(limit),
-        offset: offset,
-        order: [['nombre', 'ASC']]
-      });
+    const { count, rows } = await Member.findAndCountAll({
+      where: { id_gimnasio },
+      distinct: true, // Asegura que el conteo sea de miembros únicos
+      include: [{
+        model: Payment,
+        attributes: ['fecha_vencimiento'],
+        limit: 1,
+        order: [['fecha_vencimiento', 'DESC']]
+      }],
+      limit: limit ? parseInt(limit) : null,
+      offset,
+      order: [['nombre', 'ASC']]
+    });
 
-      const flattenedData = rows.map(m => {
-        const member = m.toJSON();
-        const lastPayment = member.Payments && member.Payments.length > 0 ? member.Payments[0] : null;
-        return {
-          ...member,
-          fecha_vencimiento: lastPayment ? lastPayment.fecha_vencimiento : null
-        };
-      });
 
+
+    // Aplanamos el resultado para incluir la fecha de vencimiento directamente
+    const flattenedData = rows.map(m => {
+      const member = m.toJSON();
+      const lastPayment = member.Payments && member.Payments.length > 0 ? member.Payments[0] : null;
       return {
-        count,
-        totalPages: Math.ceil(count / limit),
-        currentPage: parseInt(page),
-        data: flattenedData
+        ...member,
+        fecha_vencimiento: lastPayment ? lastPayment.fecha_vencimiento : null
       };
-    } catch (error) {
-      console.error("Error en getAllMembers:", error);
-      throw error;
-    }
+    });
+
+    return {
+      count,
+      totalPages: limit ? Math.ceil(count / limit) : 1,
+      currentPage: page,
+      data: flattenedData
+    };
   }
 
   async getMemberById(id_gimnasio, id_miembro) {

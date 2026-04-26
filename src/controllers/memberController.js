@@ -4,7 +4,7 @@ const paymentService = require('../services/paymentService');
 exports.getAllMembers = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
+    const limit = req.query.limit ? parseInt(req.query.limit) : null;
 
     const result = await memberService.getAllMembers(req.user.id_gimnasio, { page, limit });
     res.status(200).json({ success: true, ...result });
