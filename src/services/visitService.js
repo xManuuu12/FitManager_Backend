@@ -138,6 +138,15 @@ class VisitService {
   }
 
   async createVisit(id_gimnasio, visitData) {
+    const { id_miembro } = visitData;
+    
+    // Verificar el estado del miembro antes de registrar la visita
+    const statusResult = await this.checkMemberStatus(id_gimnasio, id_miembro);
+
+    if (statusResult.estado === 'vencido') {
+      throw new Error('El miembro tiene la membresía vencida. No se puede registrar la visita.');
+    }
+
     return await Visit.create({
       ...visitData,
       id_gimnasio,

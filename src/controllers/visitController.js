@@ -42,6 +42,12 @@ exports.createVisit = async (req, res, next) => {
     const visit = await visitService.createVisit(req.user.id_gimnasio, req.body);
     res.status(201).json({ success: true, data: visit });
   } catch (error) {
+    if (error.message.includes('membresía vencida')) {
+      return res.status(403).json({ success: false, message: error.message });
+    }
+    if (error.message === 'Miembro no encontrado') {
+      return res.status(404).json({ success: false, message: error.message });
+    }
     next(error);
   }
 };
