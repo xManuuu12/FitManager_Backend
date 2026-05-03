@@ -4,8 +4,9 @@ exports.getAllVisits = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
+    const fecha = req.query.fecha;
 
-    const result = await visitService.getAllVisits(req.user.id_gimnasio, { page, limit });
+    const result = await visitService.getAllVisits(req.user.id_gimnasio, { page, limit, fecha });
     res.status(200).json({ success: true, ...result });
   } catch (error) {
     next(error);

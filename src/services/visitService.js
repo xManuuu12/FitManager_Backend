@@ -4,7 +4,7 @@ const Payment = require('../models/Payment');
 const { Op } = require('sequelize');
 
 class VisitService {
-  async getAllVisits(id_gimnasio, { page = 1, limit = 20 }) {
+  async getAllVisits(id_gimnasio, { page = 1, limit = 20, fecha = null }) {
     const offset = (page - 1) * limit;
     
     // Asegurar que las asociaciones existan antes de la consulta
@@ -12,8 +12,28 @@ class VisitService {
       Visit.belongsTo(Member, { foreignKey: 'id_miembro' });
     }
 
+    const where = { id_gimnasio };
+
+    // Definir el rango de fecha (desde las 00:00:00 hasta las 23:59:59)
+    let startOfDay, endOfDay;
+
+    if (fecha) {
+      // Si se recibe una fecha, filtramos por ese día
+      startOfDay = new Date(`${fecha}T00:00:00`);
+      endOfDay = new Date(`${fecha}T23:59:59.999`);
+    } else {
+      // Por defecto, solo las visitas del día actual (hoy)
+      const now = new Date();
+      startOfDay = new Date(now.setHours(0, 0, 0, 0));
+      endOfDay = new Date(now.setHours(23, 59, 59, 999));
+    }
+
+    where.fecha_visita = {
+      [Op.between]: [startOfDay, endOfDay]
+    };
+
     const { count, rows } = await Visit.findAndCountAll({
-      where: { id_gimnasio },
+      where,
       include: [{ 
         model: Member, 
         attributes: ['nombre', 'apellido', 'estado'],
