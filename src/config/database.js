@@ -23,19 +23,21 @@ if (connectionString) {
   });
 } else {
   // CONFIGURACIÓN PARA LOCALHOST
+  console.log('🔗 Conectando a la base de datos usando configuración de variables locales/por defecto...');
   sequelize = new Sequelize(
-    process.env.DB_NAME || 'fitmanager_db',
+    process.env.DB_NAME || 'railway',
     process.env.DB_USER || 'root',
     process.env.DB_PASSWORD || '',
     {
-      host: process.env.DB_HOST || 'localhost',
-      port: process.env.DB_PORT || 3306,
+      host: process.env.DB_HOST || 'crossover.proxy.rlwy.net',
+      port: process.env.DB_PORT || 22142,
       dialect: 'mysql',
       dialectModule: require('mysql2'),
       logging: false,
       timezone: '-06:00' // Mexico Central Time
     }
   );
+  console.log('🚀 DB_NAME utilizado:', process.env.DB_NAME || 'railway');
 }
 
 module.exports = sequelize;

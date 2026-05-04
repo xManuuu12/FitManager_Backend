@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { sendReminder, handleIncomingWhatsApp } = require('../controllers/notificationController');
+const { sendReminder, handleIncomingWhatsApp, verifyWebhook } = require('../controllers/notificationController');
 const { protect } = require('../middlewares/authMiddleware');
 
-// Ruta pública para Twilio (No lleva protect)
+// Rutas públicas para Meta Webhook
+router.get('/whatsapp-webhook', verifyWebhook);
 router.post('/whatsapp-webhook', handleIncomingWhatsApp);
 
 // Rutas protegidas

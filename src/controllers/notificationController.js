@@ -17,33 +17,70 @@ exports.sendReminder = async (req, res, next) => {
 };
 
 /**
- * Maneja los mensajes entrantes de WhatsApp (Webhook de Twilio)
+ * Verificación del Webhook de Meta
+ */
+exports.verifyWebhook = (req, res) => {
+  const verify_token = process.env.META_WEBHOOK_VERIFY_TOKEN;
+
+  let mode = req.query['hub.mode'];
+  let token = req.query['hub.verify_token'];
+  let challenge = req.query['hub.challenge'];
+
+  if (mode && token) {
+    if (mode === 'subscribe' && token === verify_token) {
+      console.log('WEBHOOK_VERIFIED');
+      res.status(200).send(challenge);
+    } else {
+      res.sendStatus(403);
+    }
+  } else {
+    res.sendStatus(400);
+  }
+};
+
+/**
+ * Maneja los mensajes entrantes de WhatsApp (Webhook de Meta)
  */
 exports.handleIncomingWhatsApp = async (req, res, next) => {
   try {
-    const { Body, From } = req.body;
-    const message = Body.toLowerCase().trim();
-    const fromNumber = From.replace('whatsapp:', '');
+    const body = req.body;
 
-    let responseMessage = '';
+    if (body.object) {
+      if (
+        body.entry &&
+        body.entry[0].changes &&
+        body.entry[0].changes[0] &&
+        body.entry[0].changes[0].value.messages &&
+        body.entry[0].changes[0].value.messages[0]
+      ) {
+        const messageObj = body.entry[0].changes[0].value.messages[0];
+        const fromNumber = messageObj.from;
 
-    if (message.includes('precio') || message.includes('plan')) {
-      responseMessage = '🏋️‍♂️ *Nuestros Planes:*\n\n1. Mensualidad: $350 MXN\n2. Trimestre: $900 MXN\n3. Visita: $50 MXN\n\n¿Te gustaría inscribirte?';
-    } else if (message.includes('horario')) {
-      responseMessage = '🕒 *Horarios Laguna Fitness:*\n\nLunes a Viernes: 6:00 AM - 10:00 PM\nSábados: 8:00 AM - 2:00 PM\nDomingos: Cerrado';
-    } else if (message.includes('hola') || message.includes('buenos días')) {
-      responseMessage = '¡Hola! 👋 Bienvenido al bot de *Laguna Fitness*. Escribe "Precio" para conocer nuestros planes o "Horario" para ver cuándo abrimos.';
+        if (messageObj.type === 'text') {
+          const messageText = messageObj.text.body.toLowerCase().trim();
+          let responseMessage = '';
+
+          if (messageText.includes('precio') || messageText.includes('plan')) {
+            responseMessage = '🏋️‍♂️ *Nuestros Planes:*\n\n1. Mensualidad: $350 MXN\n2. Trimestre: $900 MXN\n3. Visita: $50 MXN\n\n¿Te gustaría inscribirte?';
+          } else if (messageText.includes('horario')) {
+            responseMessage = '🕒 *Horarios Laguna Fitness:*\n\nLunes a Viernes: 6:00 AM - 10:00 PM\nSábados: 8:00 AM - 2:00 PM\nDomingos: Cerrado';
+          } else if (messageText.includes('hola') || messageText.includes('buenos días')) {
+            responseMessage = '¡Hola! 👋 Bienvenido al bot de *Laguna Fitness*. Escribe "Precio" para conocer nuestros planes o "Horario" para ver cuándo abrimos.';
+          } else {
+            responseMessage = 'Lo siento, no entendí eso. 🤔 Escribe "Precio" o "Horario" para ayudarte.';
+          }
+
+          // Enviamos la respuesta usando nuestro servicio
+          await sendWhatsApp(fromNumber, responseMessage);
+        }
+      }
+      res.sendStatus(200);
     } else {
-      responseMessage = 'Lo siento, no entendí eso. 🤔 Escribe "Precio" o "Horario" para ayudarte.';
+      res.sendStatus(404);
     }
-
-    // Enviamos la respuesta usando nuestro servicio existente
-    await sendWhatsApp(fromNumber, responseMessage);
-
-    // Twilio espera una respuesta HTTP 200 vacía o un TwiML
-    res.status(200).send('<Response></Response>');
   } catch (error) {
-    console.error('Error en Bot WhatsApp:', error);
-    res.status(200).send('<Response></Response>'); // Respondemos 200 para que Twilio no reintente
+    console.error('Error en Bot WhatsApp Meta:', error);
+    res.sendStatus(500);
   }
 };
+

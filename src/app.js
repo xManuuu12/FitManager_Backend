@@ -68,11 +68,6 @@ app.get('/', (req, res) => {
   res.json({ message: 'Welcome to FitManager SaaS API' });
 });
 
-// Verificación de dominio para Twilio
-app.get('/a8271e7334f0f14d6b13b706b8f509ce.html', (req, res) => {
-  res.send('twilio-domain-verification=a8271e7334f0f14d6b13b706b8f509ce');
-});
-
 // Error handling middleware
 app.use(errorHandler);
 
