@@ -22,8 +22,11 @@ class MemberService {
       include: [{
         model: Payment,
         attributes: ['fecha_vencimiento'],
-        separate: true, // Subconsulta aparte: permite limit:1 + include anidado correcto
-        limit: 1,
+        // Subconsulta aparte para no romper la paginación de miembros.
+        // OJO: NO usar `limit` aquí: separate + limit + include anidado genera
+        // un ON clause inválido en Sequelize. Traemos los pagos ordenados y
+        // tomamos el último en JS (más abajo).
+        separate: true,
         order: [['fecha_vencimiento', 'DESC']],
         include: [{
           model: Membresia,
