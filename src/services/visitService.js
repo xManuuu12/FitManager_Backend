@@ -150,11 +150,20 @@ class VisitService {
       throw new Error('El miembro tiene la membresía vencida. No se puede registrar la visita.');
     }
 
-    return await Visit.create({
+    const visit = await Visit.create({
       ...visitData,
       id_gimnasio,
       fecha_visita: new Date()
     });
+
+    // Devolvemos la fecha ya formateada en TZ México para que la respuesta del POST
+    // NO viaje en UTC (mismo criterio que getAllVisits).
+    const json = visit.toJSON();
+    return {
+      ...json,
+      fecha_visita: toMexicoISO(json.fecha_visita),
+      hora_entrada: toMexicoTime(json.fecha_visita)
+    };
   }
 }
 
