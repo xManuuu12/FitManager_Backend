@@ -2,6 +2,7 @@ const Visit = require('../models/Visit');
 const Member = require('../models/Member');
 const Payment = require('../models/Payment');
 const { Op } = require('sequelize');
+const { toMexicoISO, toMexicoTime, mexicoToday } = require('../utils/dateHelper');
 
 class VisitService {
   async getAllVisits(id_gimnasio, { page = 1, limit = 20, fecha = null }) {
@@ -44,16 +45,18 @@ class VisitService {
       order: [['fecha_visita', 'DESC']]
     });
 
-    // Aplanamos el resultado para que el frontend (Angular) lo consuma fácilmente
+    // Aplanamos el resultado para que el frontend (Angular) lo consuma fácilmente.
+    // OJO: fecha_visita se reformatea a ISO con offset de México para que NO viaje
+    // como UTC (que es lo que causaba el desfase de +6h en el frontend).
     const flattenedData = rows.map(v => {
       const visit = v.toJSON();
-      const hora = new Date(visit.fecha_visita).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
       return {
         ...visit,
+        fecha_visita: toMexicoISO(visit.fecha_visita),
         nombre: visit.Member ? visit.Member.nombre : 'N/A',
         apellido: visit.Member ? visit.Member.apellido : '',
         estado_membresia: visit.Member ? visit.Member.estado : 'activo',
-        hora_entrada: hora
+        hora_entrada: toMexicoTime(visit.fecha_visita)
       };
     });
 
@@ -82,8 +85,8 @@ class VisitService {
       order: [['fecha_vencimiento', 'DESC']]
     });
 
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
+    // "Hoy" en TZ de México (toISOString daría UTC y cerca de medianoche fallaría)
+    const today = mexicoToday();
 
     let status = 'vencido';
     let message = 'Membresía vencida o sin pagos registrados';
