@@ -28,25 +28,30 @@ exports.getMemberById = async (req, res, next) => {
 exports.createMember = async (req, res, next) => {
   try {
     const { id_membresia, metodo_pago, ...memberData } = req.body;
-    
-    // 1. Crear al miembro
-    const member = await memberService.createMember(req.user.id_gimnasio, memberData);
 
-    // 2. Si el pago es por tarjeta, generar el intento de Stripe
+    // 1. Tarjeta → flujo Stripe: creamos el miembro SIN pago (lo confirma el webhook)
     if (metodo_pago === 'tarjeta' && id_membresia) {
+      const member = await memberService.createMember(req.user.id_gimnasio, memberData);
+
       const intent = await paymentService.createStripeIntent(req.user.id_gimnasio, {
         id_miembro: member.id_miembro,
         id_membresia: id_membresia
       });
 
-      return res.status(201).json({ 
-        success: true, 
+      return res.status(201).json({
+        success: true,
         data: member,
         clientSecret: intent.client_secret // Este secreto lo usa el front para abrir Stripe
       });
     }
 
-    // 3. Si no es tarjeta, respuesta normal
+    // 2. Efectivo / transferencia / sin pago → miembro + pago en una sola transacción
+    const member = await memberService.createMember(req.user.id_gimnasio, {
+      ...memberData,
+      id_membresia,
+      metodo_pago
+    });
+
     res.status(201).json({ success: true, data: member });
   } catch (error) {
     next(error);

@@ -2,6 +2,7 @@ const Payment = require('../models/Payment');
 const Member = require('../models/Member');
 const Membresia = require('../models/Membresia');
 const sequelize = require('../config/database');
+const { calcularVencimiento } = require('../utils/membresiaHelper');
 require('dotenv').config(); // Asegúrate de cargar dotenv
 
 // Inicialización segura de Stripe
@@ -35,12 +36,7 @@ class PaymentService {
     if (!membresia) throw new Error('Membresía no encontrada o no válida para este gimnasio');
 
     // 3. CALCULAR FECHA DE VENCIMIENTO (Hoy + duración de la membresía)
-    const hoy = new Date();
-    const vencimiento = new Date();
-    vencimiento.setDate(hoy.getDate() + membresia.duracion_dias);
-    
-    // Formato YYYY-MM-DD para la base de datos
-    const fecha_vencimiento = vencimiento.toISOString().split('T')[0];
+    const fecha_vencimiento = calcularVencimiento(membresia.duracion_dias);
 
     console.log(`[Stripe] Generando intento de pago: $${membresia.precio} para miembro #${id_miembro}. Vence: ${fecha_vencimiento}`);
 
