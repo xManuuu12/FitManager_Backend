@@ -18,6 +18,7 @@ const OFFSET = '-06:00';
  * Cualquier parser correcto (Angular DatePipe, navegador) lo interpreta bien.
  */
 exports.toMexicoISO = (date) => {
+  if (!date) return date; // null/undefined: no formatear
   // sv-SE produce "YYYY-MM-DD HH:mm:ss"
   const local = new Date(date).toLocaleString('sv-SE', { timeZone: TIMEZONE });
   return local.replace(' ', 'T') + OFFSET;

@@ -53,6 +53,8 @@ class VisitService {
       return {
         ...visit,
         fecha_visita: toMexicoISO(visit.fecha_visita),
+        created_at: toMexicoISO(visit.created_at),
+        updated_at: toMexicoISO(visit.updated_at),
         nombre: visit.Member ? visit.Member.nombre : 'N/A',
         apellido: visit.Member ? visit.Member.apellido : '',
         estado_membresia: visit.Member ? visit.Member.estado : 'activo',
@@ -162,6 +164,8 @@ class VisitService {
     return {
       ...json,
       fecha_visita: toMexicoISO(json.fecha_visita),
+      created_at: toMexicoISO(json.created_at),
+      updated_at: toMexicoISO(json.updated_at),
       hora_entrada: toMexicoTime(json.fecha_visita)
     };
   }
