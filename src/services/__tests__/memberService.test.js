@@ -164,4 +164,35 @@ describe('memberService', () => {
       expect(result.data[0].membresia).toBeNull();
     });
   });
+
+  describe('restoreMember', () => {
+    test('restaura un miembro borrado', async () => {
+      const borrado = { id_miembro: 3, restore: jest.fn().mockResolvedValue() };
+      Member.findOne
+        .mockResolvedValueOnce(borrado) // 1er findOne (paranoid:false) → lo encuentra borrado
+        .mockResolvedValueOnce(null);   // 2do findOne (normal) → null = está borrado
+
+      await memberService.restoreMember(1, 3);
+
+      // 1ra búsqueda incluye los borrados
+      expect(Member.findOne).toHaveBeenNthCalledWith(1, { where: { id_miembro: 3, id_gimnasio: 1 }, paranoid: false });
+      expect(borrado.restore).toHaveBeenCalled();
+    });
+
+    test('miembro inexistente: lanza error', async () => {
+      Member.findOne.mockResolvedValueOnce(null);
+
+      await expect(memberService.restoreMember(1, 999)).rejects.toThrow('Miembro no encontrado');
+    });
+
+    test('miembro que NO está eliminado: lanza error y no restaura', async () => {
+      const activo = { id_miembro: 4, restore: jest.fn() };
+      Member.findOne
+        .mockResolvedValueOnce(activo) // paranoid:false lo encuentra
+        .mockResolvedValueOnce(activo); // normal también → está activo
+
+      await expect(memberService.restoreMember(1, 4)).rejects.toThrow('El miembro no está eliminado');
+      expect(activo.restore).not.toHaveBeenCalled();
+    });
+  });
 });

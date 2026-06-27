@@ -58,6 +58,30 @@
 *   **GET** `/auth/users`
 *   **Descripción:** Lista todos los usuarios (staff/admin) del gimnasio actual.
 
+### Actualizar Usuario
+*   **PUT** `/auth/users/:id`
+*   **Protección:** Solo Admin (Requiere Token).
+*   **Descripción:** Actualiza un usuario del gimnasio actual. Todos los campos son opcionales (se actualiza solo lo que se envía). El email debe ser único dentro del gimnasio. Si se envía `password`, se re-encripta automáticamente; si va vacío o ausente, no se modifica.
+*   **Body:**
+    ```json
+    {
+      "nombre": "Nuevo Nombre",
+      "email": "nuevo@gym.com",
+      "rol": "recepcion",
+      "password": "nueva_password"
+    }
+    ```
+*   **Errores:** `404` (usuario no encontrado o de otro gimnasio), `400` (email ya registrado o rol inválido).
+
+### Eliminar Usuario
+*   **DELETE** `/auth/users/:id`
+*   **Protección:** Solo Admin (Requiere Token).
+*   **Descripción:** Elimina (borrado físico) un usuario del gimnasio actual.
+*   **Guardas anti-lockout:**
+    *   No puedes eliminar tu propio usuario.
+    *   No puedes eliminar al único administrador del gimnasio.
+*   **Errores:** `404` (usuario no encontrado o de otro gimnasio), `400` (auto-eliminación o último admin).
+
 ---
 
 ## 👥 2. Miembros (Members)
@@ -90,6 +114,11 @@
 *   **GET** `/members/:id`
 *   **PUT** `/members/:id`
 *   **DELETE** `/members/:id` (Realiza **Soft Delete**, el registro persiste pero se oculta).
+
+### Restaurar Miembro
+*   **POST** `/members/:id/restore`
+*   **Descripción:** Restaura un miembro previamente borrado (deshace el soft delete).
+*   **Errores:** `404` (miembro no encontrado o de otro gimnasio), `400` (el miembro no está eliminado).
 
 ---
 

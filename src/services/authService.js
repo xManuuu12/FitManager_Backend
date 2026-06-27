@@ -75,6 +75,79 @@ class AuthService {
     });
   }
 
+  /**
+   * Actualiza un usuario del gimnasio. SaaS-safe: solo busca dentro del id_gimnasio
+   * del admin autenticado, así nunca puede tocar usuarios de otro gimnasio.
+   * El password se re-hashea automáticamente vía el hook beforeUpdate del modelo.
+   */
+  async updateUser(id_gimnasio, id_usuario, updateData) {
+    // 1. Buscar el usuario DENTRO del gimnasio (aislamiento de tenant)
+    const user = await User.findOne({ where: { id_usuario, id_gimnasio } });
+    if (!user) {
+      throw new Error('Usuario no encontrado');
+    }
+
+    // 2. Campos que NUNCA se pueden cambiar por esta vía
+    delete updateData.id_gimnasio;
+    delete updateData.id_usuario;
+
+    // 3. Si el password viene vacío o ausente, no lo tocamos
+    if (!updateData.password) {
+      delete updateData.password;
+    }
+
+    // 4. Validar el rol si viene
+    if (updateData.rol && !['admin', 'recepcion'].includes(updateData.rol)) {
+      throw new Error('Rol inválido');
+    }
+
+    // 5. Email único por gimnasio (solo si cambió)
+    if (updateData.email && updateData.email !== user.email) {
+      const emailEnUso = await User.findOne({
+        where: { email: updateData.email, id_gimnasio }
+      });
+      if (emailEnUso) {
+        throw new Error('El email ya está registrado en este gimnasio');
+      }
+    }
+
+    // 6. Guardar (el hook beforeUpdate hashea el password si cambió)
+    await user.update(updateData);
+
+    const userData = user.toJSON();
+    delete userData.password; // Seguridad: nunca devolver el hash
+    return userData;
+  }
+
+  /**
+   * Elimina (borrado físico) un usuario del gimnasio del admin autenticado.
+   * Guardas anti-lockout: no permite auto-eliminarse ni borrar al único admin.
+   * @param {number} solicitanteId - id_usuario del admin que ejecuta la acción.
+   */
+  async deleteUser(id_gimnasio, id_usuario, solicitanteId) {
+    // 1. Anti-lockout: no podés eliminar tu propio usuario
+    if (parseInt(id_usuario, 10) === parseInt(solicitanteId, 10)) {
+      throw new Error('No puedes eliminar tu propio usuario');
+    }
+
+    // 2. SaaS-safe: buscar dentro del gimnasio
+    const user = await User.findOne({ where: { id_usuario, id_gimnasio } });
+    if (!user) {
+      throw new Error('Usuario no encontrado');
+    }
+
+    // 3. Anti-lockout: no dejar al gimnasio sin ningún administrador
+    if (user.rol === 'admin') {
+      const totalAdmins = await User.count({ where: { id_gimnasio, rol: 'admin' } });
+      if (totalAdmins <= 1) {
+        throw new Error('No puedes eliminar al único administrador del gimnasio');
+      }
+    }
+
+    await user.destroy();
+    return { id_usuario: user.id_usuario };
+  }
+
   async getUserById(id_usuario, id_gimnasio) {
     const user = await User.findByPk(id_usuario, {
       include: [{ 

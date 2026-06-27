@@ -38,7 +38,7 @@ const Member = sequelize.define('Member', {
   createdAt: 'fecha_registro', // 3. Mapea fecha_registro como el createdAt
   updatedAt: 'updated_at',     // 4. Mapea updated_at como el updatedAt
   deletedAt: 'deleted_at',
-  paranoid: false,
+  paranoid: true, // Soft delete: destroy() marca deleted_at en vez de borrar la fila
 });
 
 module.exports = Member;

@@ -5,12 +5,16 @@ const {
   getMemberById,
   createMember,
   updateMember,
-  deleteMember
+  deleteMember,
+  restoreMember
 } = require('../controllers/memberController');
 
 router.route('/')
   .get(getAllMembers)
   .post(createMember);
+
+// Restaurar un miembro borrado (soft delete). Va antes de '/:id' por claridad.
+router.post('/:id/restore', restoreMember);
 
 router.route('/:id')
   .get(getMemberById)

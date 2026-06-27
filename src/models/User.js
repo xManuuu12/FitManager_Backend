@@ -59,4 +59,13 @@ User.beforeCreate(async (user) => {
   user.password = await bcrypt.hash(user.password, salt);
 });
 
+// Hook para re-encriptar SOLO si el password cambió en un update.
+// Sin esto, actualizar un usuario guardaría la contraseña en texto plano.
+User.beforeUpdate(async (user) => {
+  if (user.changed('password')) {
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(user.password, salt);
+  }
+});
+
 module.exports = User;

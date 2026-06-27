@@ -130,6 +130,30 @@ class MemberService {
     const member = await this.getMemberById(id_gimnasio, id_miembro);
     return await member.destroy();
   }
+
+  /**
+   * Restaura un miembro previamente borrado (soft delete).
+   * Usa paranoid:false para poder encontrar la fila marcada como eliminada.
+   */
+  async restoreMember(id_gimnasio, id_miembro) {
+    // paranoid:false → incluye también los miembros borrados
+    const member = await Member.findOne({
+      where: { id_miembro, id_gimnasio },
+      paranoid: false
+    });
+    if (!member) {
+      throw new Error('Miembro no encontrado');
+    }
+
+    // Si una búsqueda normal (que excluye borrados) lo encuentra, es que está activo
+    const activo = await Member.findOne({ where: { id_miembro, id_gimnasio } });
+    if (activo) {
+      throw new Error('El miembro no está eliminado');
+    }
+
+    await member.restore();
+    return member;
+  }
 }
 
 module.exports = new MemberService();
