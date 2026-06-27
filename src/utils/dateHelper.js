@@ -28,6 +28,23 @@ exports.toMexicoISO = (date) => {
 exports.toMexicoTime = (date) =>
   new Date(date).toLocaleTimeString('en-GB', { timeZone: TIMEZONE, hour: '2-digit', minute: '2-digit' });
 
-/** Fecha "hoy" (YYYY-MM-DD) en TZ de México, sin el desfase de toISOString (UTC). */
-exports.mexicoToday = () =>
-  new Date().toLocaleDateString('en-CA', { timeZone: TIMEZONE });
+/** Fecha (YYYY-MM-DD) de un instante dado en TZ de México, sin el desfase de UTC. */
+exports.mexicoDateOf = (date = new Date()) =>
+  new Date(date).toLocaleDateString('en-CA', { timeZone: TIMEZONE });
+
+/** Fecha "hoy" (YYYY-MM-DD) en TZ de México. */
+exports.mexicoToday = () => exports.mexicoDateOf();
+
+/**
+ * Rango [inicio, fin] de un día completo en TZ de México, con offset EXPLÍCITO.
+ * No depende de process.env.TZ: sirve para filtrar por día de forma robusta.
+ * @param {string} [fecha] - 'YYYY-MM-DD'. Si se omite, usa el día actual en México.
+ * @returns {{ start: Date, end: Date }}
+ */
+exports.mexicoDayRange = (fecha) => {
+  const day = fecha || exports.mexicoToday();
+  return {
+    start: new Date(`${day}T00:00:00.000${OFFSET}`),
+    end: new Date(`${day}T23:59:59.999${OFFSET}`)
+  };
+};

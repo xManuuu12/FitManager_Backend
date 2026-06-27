@@ -2,7 +2,7 @@ const Visit = require('../models/Visit');
 const Member = require('../models/Member');
 const Payment = require('../models/Payment');
 const { Op } = require('sequelize');
-const { toMexicoISO, toMexicoTime, mexicoToday } = require('../utils/dateHelper');
+const { toMexicoISO, toMexicoTime, mexicoToday, mexicoDayRange } = require('../utils/dateHelper');
 
 class VisitService {
   async getAllVisits(id_gimnasio, { page = 1, limit = 20, fecha = null }) {
@@ -15,22 +15,11 @@ class VisitService {
 
     const where = { id_gimnasio };
 
-    // Definir el rango de fecha (desde las 00:00:00 hasta las 23:59:59)
-    let startOfDay, endOfDay;
-
-    if (fecha) {
-      // Si se recibe una fecha, filtramos por ese día
-      startOfDay = new Date(`${fecha}T00:00:00`);
-      endOfDay = new Date(`${fecha}T23:59:59.999`);
-    } else {
-      // Por defecto, solo las visitas del día actual (hoy)
-      const now = new Date();
-      startOfDay = new Date(now.setHours(0, 0, 0, 0));
-      endOfDay = new Date(now.setHours(23, 59, 59, 999));
-    }
-
+    // Rango del día completo en TZ México con offset EXPLÍCITO (no depende de
+    // process.env.TZ). Si no se pasa fecha, usa el día actual en México.
+    const { start, end } = mexicoDayRange(fecha);
     where.fecha_visita = {
-      [Op.between]: [startOfDay, endOfDay]
+      [Op.between]: [start, end]
     };
 
     const { count, rows } = await Visit.findAndCountAll({
@@ -116,15 +105,14 @@ class VisitService {
   }
 
   async getTodayStats(id_gimnasio) {
-    const now = new Date();
-    const startOfDay = new Date(now.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(now.setHours(23, 59, 59, 999));
+    // Día actual en México con offset explícito (robusto ante la TZ del proceso)
+    const { start, end } = mexicoDayRange();
     const lastHour = new Date(Date.now() - 60 * 60 * 1000);
 
     const hoy = await Visit.count({
       where: {
         id_gimnasio,
-        fecha_visita: { [Op.between]: [startOfDay, endOfDay] }
+        fecha_visita: { [Op.between]: [start, end] }
       }
     });
 
